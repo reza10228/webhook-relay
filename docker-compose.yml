@@ -1,0 +1,16 @@
+services:
+  zulip-webhook:
+    container_name: webhook-relay
+
+    image: webhook-relay
+
+    ports:
+      - "8686:8686"
+
+    restart: always
+
+    volumes:
+      - ./logs:/app/logs
+
+    environment:
+      TZ: Asia/Tehran
