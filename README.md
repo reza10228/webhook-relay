@@ -183,6 +183,172 @@ curl -X POST "http://localhost:8686/mattermost?webhook_url=https://mattermost.ex
 ```
 
 ---
+# Alertmanager Integration
+
+This section explains how to integrate the webhook relay service with Prometheus Alertmanager for both Zulip and Mattermost.
+
+---
+
+# Alertmanager → Zulip
+
+## Example `alertmanager.yml`
+
+```yaml
+receivers:
+  - name: zulip-webhook
+    webhook_configs:
+      - url: >-
+          http://webhook-relay:8686/zulip
+          ?webhook_url=https://zulip.example.com
+          &email=bot@example.com
+          &token=YOUR_ZULIP_BOT_TOKEN
+          &to=alerts
+          &topic=monitoring
+
+route:
+  receiver: zulip-webhook
+```
+
+---
+
+## Example With `ignore_ssl=true`
+
+```yaml
+receivers:
+  - name: zulip-webhook
+    webhook_configs:
+      - url: >-
+          http://webhook-relay:8686/zulip
+          ?webhook_url=https://zulip.example.com
+          &email=bot@example.com
+          &token=YOUR_ZULIP_BOT_TOKEN
+          &to=alerts
+          &topic=monitoring
+          &ignore_ssl=true
+
+route:
+  receiver: zulip-webhook
+```
+
+---
+
+# Alertmanager → Mattermost
+
+## Example `alertmanager.yml`
+
+```yaml
+receivers:
+  - name: mattermost-webhook
+    webhook_configs:
+      - url: >-
+          http://webhook-relay:8686/mattermost
+          ?webhook_url=https://mattermost.example.com/hooks/xxxxxxxxxxxxxxxx
+
+route:
+  receiver: mattermost-webhook
+```
+
+---
+
+## Example With `ignore_ssl=true`
+
+```yaml
+receivers:
+  - name: mattermost-webhook
+    webhook_configs:
+      - url: >-
+          http://webhook-relay:8686/mattermost
+          ?webhook_url=https://mattermost.example.com/hooks/xxxxxxxxxxxxxxxx
+          &ignore_ssl=true
+
+route:
+  receiver: mattermost-webhook
+```
+
+---
+
+# Recommended Alertmanager Configuration
+
+Recommended options:
+
+```yaml
+webhook_configs:
+  - send_resolved: true
+    max_alerts: 10
+```
+
+Example:
+
+```yaml
+receivers:
+  - name: mattermost-webhook
+    webhook_configs:
+      - url: >-
+          http://webhook-relay:8686/mattermost
+          ?webhook_url=https://mattermost.example.com/hooks/xxxxxxxx
+        send_resolved: true
+        max_alerts: 10
+```
+
+---
+
+# Login Alert Example
+
+Example alert rule for login notifications:
+
+```yaml
+groups:
+  - name: login-alerts
+    rules:
+      - alert: UserLogin
+        expr: vector(1)
+        labels:
+          type: login
+          source: script
+        annotations:
+          summary: "User r.shoghi logged into beta-mon-lapp1 from IP 172.24.2.55"
+```
+
+Rendered output:
+
+```text
+ℹ️ Notification
+
+User **r.shoghi** logged into **beta-mon-lapp1** from IP **172.24.2.55**
+```
+
+---
+
+# Network Notes
+
+Make sure Alertmanager can access the relay service:
+
+```text
+http://webhook-relay:8686
+```
+
+depending on your environment.
+
+---
+
+# Health Check Example
+
+You can test connectivity manually:
+
+## Zulip
+
+```bash
+curl -X POST "http://webhook-relay:8686/zulip?webhook_url=https://zulip.example.com&email=bot@example.com&token=TOKEN&to=alerts" -H "Content-Type: application/json" -d '{"text":"test"}'
+```
+
+## Mattermost
+
+```bash
+curl -X POST "http://webhook-relay:8686/mattermost?webhook_url=https://mattermost.example.com/hooks/xxxxx" -H "Content-Type: application/json" -d '{"text":"test"}'
+```
+
+---
+
 
 # Logging
 
